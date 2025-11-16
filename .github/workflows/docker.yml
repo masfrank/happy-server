@@ -35,8 +35,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-      id-token: write
-      attestations: write
 
     steps:
       - name: Checkout repository
@@ -126,11 +124,3 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
-
-      - name: Generate artifact attestation for GHCR
-        if: github.event_name != 'pull_request'
-        uses: actions/attest-build-provenance@v1
-        with:
-          subject-name: ${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_NAME}}
-          subject-digest: ${{ steps.build-ghcr.outputs.digest }}
-          push-to-registry: true

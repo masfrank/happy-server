@@ -1,46 +1,79 @@
 # Stage 1: Building the application
-FROM node:20 AS builder
+FROM node:20-alpine AS builder
 
-# Install dependencies
-RUN apt-get update && apt-get install -y python3 ffmpeg make g++ build-essential && rm -rf /var/lib/apt/lists/*
+# Install build dependencies
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    ffmpeg
 
 WORKDIR /app
 
-# Copy package.json and yarn.lock
+# Copy package files
 COPY package.json yarn.lock ./
 COPY ./prisma ./prisma
 
-# Install dependencies
+# Install ALL dependencies (needed for build)
 RUN yarn install --frozen-lockfile --ignore-engines
 
-# Copy the rest of the application code
+# Copy source code
 COPY ./tsconfig.json ./tsconfig.json
-COPY ./vitest.config.ts ./vitest.config.ts
 COPY ./sources ./sources
 
-# Build the Next.js application
+# Build the application
 RUN yarn build
 
-# Stage 2: Runtime
-FROM node:20 AS runner
+# Stage 2: Production dependencies
+FROM node:20-alpine AS deps
 
 WORKDIR /app
 
-# Install dependencies
-RUN apt-get update && apt-get install -y python3 ffmpeg && rm -rf /var/lib/apt/lists/*
+# Copy package files
+COPY package.json yarn.lock ./
+COPY ./prisma ./prisma
+
+# Install ONLY production dependencies
+RUN yarn install --frozen-lockfile --production --ignore-engines && \
+    yarn cache clean
+
+# Stage 3: Runtime with glibc support
+FROM frolvlad/alpine-glibc:alpine-3.19_glibc-2.34 AS runner
+
+# Install Node.js, Yarn and runtime dependencies
+RUN apk add --no-cache \
+    nodejs \
+    yarn \
+    python3 \
+    ffmpeg && \
+    rm -rf /var/cache/apk/*
+
+WORKDIR /app
+
+# Create a non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
 
 # Set environment to production
 ENV NODE_ENV=production
 
-# Copy necessary files from the builder stage
-COPY --from=builder /app/tsconfig.json ./tsconfig.json
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/sources ./sources
-COPY --from=builder /app/prisma ./prisma
+# Copy necessary files from builder
+COPY --from=builder --chown=nodejs:nodejs /app/tsconfig.json ./tsconfig.json
+COPY --from=builder --chown=nodejs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nodejs:nodejs /app/sources ./sources
+COPY --from=builder --chown=nodejs:nodejs /app/prisma ./prisma
 
-# Expose the port the app will run on
+# Copy production node_modules from deps stage
+COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+
+# Switch to non-root user
+USER nodejs
+
+# Expose the port
 EXPOSE 3000
 
 # Command to run the application
-CMD ["yarn", "start"] 
+CMD ["yarn", "start"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
