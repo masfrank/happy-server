@@ -52,19 +52,19 @@ WORKDIR /app
 
 # Create a non-root user
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+    adduser -S nodejs -u 1001 && \
+    chown -R nodejs:nodejs /app
 
 # Set environment to production
 ENV NODE_ENV=production
 
 # Copy necessary files from builder
-COPY --from=builder --chown=nodejs:nodejs /app/tsconfig.json ./tsconfig.json
-COPY --from=builder --chown=nodejs:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=nodejs:nodejs /app/sources ./sources
-COPY --from=builder --chown=nodejs:nodejs /app/prisma ./prisma
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/sources ./sources
+COPY --from=builder /app/prisma ./prisma
+COPY --from=deps /app/node_modules ./node_modules
 
-# Copy production node_modules from deps stage
-COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
 
 # Switch to non-root user
 USER nodejs
