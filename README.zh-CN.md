@@ -76,11 +76,6 @@ docker compose up -d
 | `REDIS_URL` | — | — | Redis 连接 URL，启用后支持多实例发布订阅 |
 | `PORT` | — | `3005` | 服务监听端口 |
 | `TZ` | — | `UTC` | 时区，如 `Asia/Shanghai` |
-| `S3_HOST` | — | — | S3 兼容存储地址，不填则使用本地磁盘 |
-| `S3_ACCESS_KEY` | — | — | S3 访问密钥 |
-| `S3_SECRET_KEY` | — | — | S3 私有密钥 |
-| `S3_BUCKET` | — | — | S3 存储桶名称 |
-| `S3_PUBLIC_URL` | — | — | 媒体文件公开访问的基础 URL |
 | `ELEVENLABS_API_KEY` | — | — | ElevenLabs 语音 API 密钥 |
 
 完整变量列表（含可选集成）请参阅 [`.env.example`](.env.example)。
@@ -102,13 +97,14 @@ docker pull masfrank/happy-server:latest
 
 ### 为什么我们的镜像更小？
 
-上游 Dockerfile 使用 `node:20-slim`（基于 Debian）作为运行时底座。我们采用多阶段 Alpine 构建方案：
+上游 Dockerfile 使用 `node:20-slim`（基于 Debian）作为运行时底座。我们采用 2 阶段 Alpine 构建方案：
 
 | 阶段 | 基础镜像 | 作用 |
 |------|---------|------|
-| Builder | `node:20-alpine` | 编译 TypeScript、安装全量依赖 |
-| Deps | `node:20-alpine` | 仅安装生产依赖，剔除开发包 |
-| **Runner** | `frolvlad/alpine-glibc:alpine-3.19_glibc-2.34` | 最小化运行时，Alpine + glibc 兼容层 |
+| **Builder** | `node:20-alpine` | 全量安装依赖（frozen lockfile）→ 类型检查 → 原地 prune 掉 dev 包 |
+| **Runner** | `frolvlad/alpine-glibc:alpine-3.19_glibc-2.34` | 最小化运行时，复制 builder 已裁剪好的产物 |
+
+**为什么不单独设 `deps` stage？** yarn v1 不允许同时使用 `--frozen-lockfile` 和 `--production`——lockfile 是含 devDependencies 生成的，production 模式下 yarn 认为它需要更新并直接报错退出。因此我们改为：先用 `--frozen-lockfile` 一次性安装全量依赖，再用 `--production --prefer-offline` 原地删除 dev 包，复用已下载的缓存，完全不触碰 lockfile。
 
 **Alpine vs Debian：** Alpine Linux 体积约 5 MB，而 Debian slim 约 75 MB。Alpine 使用 `musl` libc，某些 Node.js 原生插件需要 `glibc` 才能运行。我们通过引入 [`frolvlad/alpine-glibc`](https://github.com/nicowillis/alpine-glibc) 在 runner 阶段注入 glibc 兼容层，兼顾体积与兼容性。
 

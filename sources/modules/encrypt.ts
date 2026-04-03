@@ -13,14 +13,14 @@ export function encryptString(path: string[], string: string) {
     return keyTree!.symmetricEncrypt(path, string);
 }
 
-export function encryptBytes(path: string[], bytes: Uint8Array<ArrayBuffer>) {
+export function encryptBytes(path: string[], bytes: Uint8Array) {
     return keyTree!.symmetricEncrypt(path, bytes);
 }
 
-export function decryptString(path: string[], encrypted: Uint8Array<ArrayBuffer>) {
+export function decryptString(path: string[], encrypted: Uint8Array) {
     return keyTree!.symmetricDecryptString(path, encrypted);
 }
 
-export function decryptBytes(path: string[], encrypted: Uint8Array<ArrayBuffer>) {
+export function decryptBytes(path: string[], encrypted: Uint8Array) {
     return keyTree!.symmetricDecryptBuffer(path, encrypted);
 }

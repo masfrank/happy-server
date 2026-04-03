@@ -1,77 +1,186 @@
-# Happy Server
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="/.github/logotype-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="/.github/logotype-light.png">
+    <img src="/.github/logotype-dark.png" width="400" alt="Happy">
+  </picture>
+</div>
 
-Minimal backend for open-source end-to-end encrypted Claude Code clients.
+<h1 align="center">
+  Mobile and Web Client for Claude Code & Codex
+</h1>
 
-## What is Happy?
+<h4 align="center">
+Use Claude Code or Codex from anywhere with end-to-end encryption.
+</h4>
 
-Happy Server is the synchronization backbone for secure Claude Code clients. It enables multiple devices to share encrypted conversations while maintaining complete privacy - the server never sees your messages, only encrypted blobs it cannot read.
+<div align="center">
 
-## Features
+[📱 **iOS App**](https://apps.apple.com/us/app/happy-claude-code-client/id6748571505) • [🤖 **Android App**](https://play.google.com/store/apps/details?id=com.ex3ndr.happy) • [🌐 **Web App**](https://app.happy.engineering) • [🎥 **See a Demo**](https://youtu.be/GCS0OG9QMSE) • [📚 **Documentation**](https://happy.engineering/docs/) • [💬 **Discord**](https://discord.gg/fX9WBAhyfD)
 
-- 🔐 **Zero Knowledge** - The server stores encrypted data but has no ability to decrypt it
-- 🎯 **Minimal Surface** - Only essential features for secure sync, nothing more  
-- 🕵️ **Privacy First** - No analytics, no tracking, no data mining
-- 📖 **Open Source** - Transparent implementation you can audit and self-host
-- 🔑 **Cryptographic Auth** - No passwords stored, only public key signatures
-- ⚡ **Real-time Sync** - WebSocket-based synchronization across all your devices
-- 📱 **Multi-device** - Seamless session management across phones, tablets, and computers
-- 🔔 **Push Notifications** - Notify when Claude Code finishes tasks or needs permissions (encrypted, we can't see the content)
-- 🌐 **Distributed Ready** - Built to scale horizontally when needed
+**[中文说明](./README.zh-CN.md)**
 
-## How It Works
+</div>
 
-Your Claude Code clients generate encryption keys locally and use Happy Server as a secure relay. Messages are end-to-end encrypted before leaving your device. The server's job is simple: store encrypted blobs and sync them between your devices in real-time.
+<img width="5178" height="2364" alt="github" src="/.github/header.png" />
 
-## Hosting
 
-**You don't need to self-host!** Our free cloud Happy Server at `happy-api.slopus.com` is just as secure as running your own. Since all data is end-to-end encrypted before it reaches our servers, we literally cannot read your messages even if we wanted to. The encryption happens on your device, and only you have the keys.
+<h3 align="center">
+Step 1: Download App
+</h3>
 
-That said, Happy Server is open source and self-hostable if you prefer running your own infrastructure. The security model is identical whether you use our servers or your own.
+<div align="center">
+<a href="https://apps.apple.com/us/app/happy-claude-code-client/id6748571505"><img width="135" height="39" alt="appstore" src="https://github.com/user-attachments/assets/45e31a11-cf6b-40a2-a083-6dc8d1f01291" /></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://play.google.com/store/apps/details?id=com.ex3ndr.happy"><img width="135" height="39" alt="googleplay" src="https://github.com/user-attachments/assets/acbba639-858f-4c74-85c7-92a4096efbf5" /></a>
+</div>
 
-## Self-Hosting with Docker
-
-The standalone Docker image runs everything in a single container with no external dependencies (no Postgres, no Redis, no S3).
+<h3 align="center">
+Step 2: Install CLI on your computer
+</h3>
 
 ```bash
-docker build -t happy-server -f Dockerfile .
+npm install -g happy
 ```
 
-Run from the monorepo root:
+> Migrated from the `happy-coder` package. Thanks to [@franciscop](https://github.com/franciscop) for donating the `happy` package name!
+
+<h3 align="center">
+Step 3: Start using `happy` instead of `claude` or `codex`
+</h3>
 
 ```bash
-docker run -p 3005:3005 \
-  -e HANDY_MASTER_SECRET=<your-secret> \
-  -v happy-data:/data \
-  happy-server
+# Instead of claude, use:
+happy claude
+# or
+happy codex
 ```
 
-This uses:
-- **PGlite** - embedded PostgreSQL (data stored in `/data/pglite`)
-- **Local filesystem** - for file uploads (stored in `/data/files`)
-- **In-memory event bus** - no Redis needed
+## How does it work?
 
-Data persists in the `happy-data` Docker volume across container restarts.
+On your computer, run `happy` instead of `claude` or `happy codex` instead of `codex` to start your AI through our wrapper. When you want to control your coding agent from your phone, it restarts the session in remote mode. To switch back to your computer, just press any key on your keyboard.
 
-### Environment Variables
+## 🔥 Why Happy Coder?
+
+- 📱 **Mobile access to Claude Code and Codex** - Check what your AI is building while away from your desk
+- 🔔 **Push notifications** - Get alerted when Claude Code and Codex needs permission or encounters errors  
+- ⚡ **Switch devices instantly** - Take control from phone or desktop with one keypress
+- 🔐 **End-to-end encrypted** - Your code never leaves your devices unencrypted
+- 🛠️ **Open source** - Audit the code yourself. No telemetry, no tracking
+
+## 📦 Project Components
+
+- **[Happy App](https://github.com/slopus/happy/tree/main/packages/happy-app)** - Web UI + mobile client (Expo)
+- **[Happy CLI](https://github.com/slopus/happy/tree/main/packages/happy-cli)** - Command-line interface for Claude Code and Codex
+- **[Happy Agent](https://github.com/slopus/happy/tree/main/packages/happy-agent)** - Remote agent control CLI (create, send, monitor sessions)
+- **[Happy Server](https://github.com/slopus/happy/tree/main/packages/happy-server)** - Backend server for encrypted sync
+
+## 🏠 Who We Are
+
+We're engineers scattered across Bay Area coffee shops and hacker houses, constantly checking how our AI coding agents are progressing on our pet projects during lunch breaks. Happy Coder was born from the frustration of not being able to peek at our AI coding tools building our side hustles while we're away from our keyboards. We believe the best tools come from scratching your own itch and sharing with the community.
+
+## 📚 Documentation & Contributing
+
+- **[Documentation Website](https://happy.engineering/docs/)** - Learn how to use Happy Coder effectively
+- **[Contributing Guide](docs/CONTRIBUTING.md)** - How to contribute, PR guidelines, and development setup
+- **[Edit docs at github.com/slopus/slopus.github.io](https://github.com/slopus/slopus.github.io)** - Help improve our documentation and guides
+
+## 🐳 Docker Image (Community Build)
+
+> **This fork provides an unofficial Docker image for [happy-server](https://github.com/slopus/happy/tree/main/packages/happy-server).**  
+> The upstream [slopus/happy](https://github.com/slopus/happy) project does not publish an official Docker image for the server component — this repository fills that gap.
+
+### Quick start with Docker Compose
+
+**1. Clone and configure**
+
+```bash
+git clone https://github.com/masfrank/happy-server.git
+cd happy-server
+cp .env.example .env
+```
+
+**2. Fill in `.env` — the only required secret is `HANDY_MASTER_SECRET`**
+
+```bash
+# Generate a secure secret (run once, keep it safe — changing it breaks all sessions)
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+```
+
+Then edit `.env`:
+
+```env
+HANDY_MASTER_SECRET=<paste generated secret>
+POSTGRES_PASSWORD=<choose a strong password>
+DATABASE_URL=postgresql://happy:<same password>@postgres:5432/happy-server
+```
+
+**3. Start**
+
+```bash
+docker compose up -d
+```
+
+The server will be available at `http://localhost:3005`.
+
+---
+
+### Environment variables
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `HANDY_MASTER_SECRET` | Yes | - | Master secret for auth/encryption |
-| `PUBLIC_URL` | No | `http://localhost:3005` | Public base URL for file URLs sent to clients |
-| `PORT` | No | `3005` | Server port |
-| `DATA_DIR` | No | `/data` | Base data directory |
-| `PGLITE_DIR` | No | `/data/pglite` | PGlite database directory |
+| `HANDY_MASTER_SECRET` | ✅ | — | Master key for end-to-end encryption. Generate once, never rotate. |
+| `DATABASE_URL` | ✅ | — | PostgreSQL connection URL |
+| `POSTGRES_DB` | ✅ | `happy-server` | Database name (used by the postgres service) |
+| `POSTGRES_USER` | ✅ | `happy` | Database user |
+| `POSTGRES_PASSWORD` | ✅ | — | Database password |
+| `REDIS_URL` | — | — | Redis URL. Enables pub/sub clustering across instances. |
+| `PORT` | — | `3005` | HTTP port the server listens on |
+| `TZ` | — | `UTC` | Timezone (e.g. `Asia/Shanghai`) |
+| `ELEVENLABS_API_KEY` | — | — | ElevenLabs voice API key |
 
-### Optional: External Services
+See [`.env.example`](.env.example) for the full list including optional integrations.
 
-To use external Postgres or Redis instead of the embedded defaults, set:
+---
 
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection URL (bypasses PGlite) |
-| `REDIS_URL` | Redis connection URL |
-| `S3_HOST` | S3/MinIO host (bypasses local file storage) |
+### Available tags
+
+| Tag | Description |
+|-----|-------------|
+| `latest` | Tracks upstream `main` branch |
+| `sha-xxxxxxx` | Pinned to a specific commit |
+
+```bash
+docker pull masfrank/happy-server:latest
+```
+
+---
+
+### Why is our image smaller?
+
+The upstream Dockerfile uses `node:20-slim` (Debian-based) as the runtime base. Our build uses a 2-stage Alpine approach:
+
+| Stage | Base image | Purpose |
+|-------|-----------|---------|
+| **Builder** | `node:20-alpine` | Install all deps (frozen lockfile) → type-check → prune dev deps in-place |
+| **Runner** | `frolvlad/alpine-glibc:alpine-3.19_glibc-2.34` | Minimal Alpine + glibc shim, copy pruned artifacts from builder |
+
+**Why not a separate `deps` stage?** yarn v1 rejects `--frozen-lockfile --production` together — the lockfile was generated with dev deps included, so yarn considers it stale and refuses to continue. Instead we install everything once with `--frozen-lockfile`, then prune dev packages in-place with `--production --prefer-offline`, which reuses the already-downloaded cache without touching the lockfile.
+
+**Alpine vs Debian:** Alpine Linux is ~5 MB vs Debian slim's ~75 MB. Alpine uses `musl` libc, which breaks some native Node.js addons that expect `glibc`. We add a [`frolvlad/alpine-glibc`](https://github.com/nicowillis/alpine-glibc) shim to the runner stage — small image size with full native addon compatibility.
+
+### Build locally
+
+```bash
+git clone https://github.com/masfrank/happy-server.git
+cd happy-server
+docker build -t happy-server .
+```
+
+---
 
 ## License
 
-MIT - Use it, modify it, deploy it anywhere.
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+*This is a community fork that tracks [slopus/happy](https://github.com/slopus/happy) and adds Docker image builds. All core functionality and intellectual property belongs to the original authors.*
