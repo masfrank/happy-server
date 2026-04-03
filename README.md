@@ -1,3 +1,6 @@
+> [!WARNING]
+> This repository has been merged to the [main one](https://github.com/slopus/happy). All issues and code is now living there.
+
 # Happy Server
 
 Minimal backend for open-source end-to-end encrypted Claude Code clients.
