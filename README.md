@@ -1,6 +1,3 @@
-> [!WARNING]
-> This repository has been merged to the [main one](https://github.com/slopus/happy). All issues and code is now living there.
-
 # Happy Server
 
 Minimal backend for open-source end-to-end encrypted Claude Code clients.
@@ -30,6 +27,50 @@ Your Claude Code clients generate encryption keys locally and use Happy Server a
 **You don't need to self-host!** Our free cloud Happy Server at `happy-api.slopus.com` is just as secure as running your own. Since all data is end-to-end encrypted before it reaches our servers, we literally cannot read your messages even if we wanted to. The encryption happens on your device, and only you have the keys.
 
 That said, Happy Server is open source and self-hostable if you prefer running your own infrastructure. The security model is identical whether you use our servers or your own.
+
+## Self-Hosting with Docker
+
+The standalone Docker image runs everything in a single container with no external dependencies (no Postgres, no Redis, no S3).
+
+```bash
+docker build -t happy-server -f Dockerfile .
+```
+
+Run from the monorepo root:
+
+```bash
+docker run -p 3005:3005 \
+  -e HANDY_MASTER_SECRET=<your-secret> \
+  -v happy-data:/data \
+  happy-server
+```
+
+This uses:
+- **PGlite** - embedded PostgreSQL (data stored in `/data/pglite`)
+- **Local filesystem** - for file uploads (stored in `/data/files`)
+- **In-memory event bus** - no Redis needed
+
+Data persists in the `happy-data` Docker volume across container restarts.
+
+### Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `HANDY_MASTER_SECRET` | Yes | - | Master secret for auth/encryption |
+| `PUBLIC_URL` | No | `http://localhost:3005` | Public base URL for file URLs sent to clients |
+| `PORT` | No | `3005` | Server port |
+| `DATA_DIR` | No | `/data` | Base data directory |
+| `PGLITE_DIR` | No | `/data/pglite` | PGlite database directory |
+
+### Optional: External Services
+
+To use external Postgres or Redis instead of the embedded defaults, set:
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection URL (bypasses PGlite) |
+| `REDIS_URL` | Redis connection URL |
+| `S3_HOST` | S3/MinIO host (bypasses local file storage) |
 
 ## License
 

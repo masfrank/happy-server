@@ -1,10 +1,6 @@
-import { PrismaClient } from "@prisma/client";
 import { PGlite } from "@electric-sql/pglite";
-import { PrismaPGlite } from "pglite-prisma-adapter";
 import * as fs from "fs";
 import * as path from "path";
-
-let pgliteInstance: PGlite | null = null;
 
 type WebAssemblyModuleCtor = new (bytes: Buffer) => WebAssembly.Module;
 
@@ -15,7 +11,7 @@ function getWebAssemblyModuleCtor(): WebAssemblyModuleCtor | null {
         : null;
 }
 
-function findPGliteWasm(): { wasmModule: WebAssembly.Module; fsBundle: Blob } | null {
+function findWasmFiles(): { wasmModule: WebAssembly.Module; fsBundle: Blob } | null {
     const wasmModuleCtor = getWebAssemblyModuleCtor();
     if (!wasmModuleCtor) {
         return null;
@@ -24,6 +20,7 @@ function findPGliteWasm(): { wasmModule: WebAssembly.Module; fsBundle: Blob } | 
         process.cwd(),
         path.dirname(process.execPath),
     ];
+
     for (const dir of searchPaths) {
         const wasmPath = path.join(dir, "pglite.wasm");
         const dataPath = path.join(dir, "pglite.data");
@@ -36,26 +33,10 @@ function findPGliteWasm(): { wasmModule: WebAssembly.Module; fsBundle: Blob } | 
     return null;
 }
 
-function createClient(): PrismaClient {
-    const provider = process.env.DB_PROVIDER || "postgres";
-
-    if (provider === "pglite") {
-        const pgliteDir = process.env.PGLITE_DIR || "./data/pglite";
-        const wasmOpts = findPGliteWasm();
-        if (wasmOpts) {
-            pgliteInstance = new PGlite({ dataDir: pgliteDir, ...wasmOpts });
-        } else {
-            pgliteInstance = new PGlite(pgliteDir);
-        }
-        const adapter = new PrismaPGlite(pgliteInstance);
-        return new PrismaClient({ adapter } as any);
+export function createPGlite(dataDir: string): PGlite {
+    const wasmOpts = findWasmFiles();
+    if (wasmOpts) {
+        return new PGlite({ dataDir, ...wasmOpts });
     }
-
-    return new PrismaClient();
-}
-
-export const db = createClient();
-
-export function getPGlite(): PGlite | null {
-    return pgliteInstance;
+    return new PGlite(dataDir);
 }
