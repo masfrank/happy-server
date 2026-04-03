@@ -1,135 +1,89 @@
+# =============================================================================
+# happy-server — Docker Compose
+# =============================================================================
+# Quick start:
+#   cp .env.example .env   # fill in HANDY_MASTER_SECRET and passwords
+#   docker compose up -d
+#
+# happy-server listens on 127.0.0.1:3005 by default (reverse-proxy friendly).
+# To expose directly: change "127.0.0.1:3005:3005" → "0.0.0.0:3005:3005"
+# =============================================================================
+
 services:
+
+  # ── happy-server ────────────────────────────────────────────────────────────
   happy-server:
-    image: happy-server:latest
+    image: masfrank/happy-server:latest
     container_name: happy-server
+    restart: unless-stopped
     ports:
       - "127.0.0.1:3005:3005"
-    restart: unless-stopped
     environment:
-      - TZ=${TZ}
-      - NODE_ENV=${NODE_ENV}
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
-      - SEED=${SEED}
-      - HANDY_MASTER_SECRET=${HANDY_MASTER_SECRET}
-      - PORT=${PORT}
-      - S3_HOST=${S3_HOST}
-      - S3_PORT=${S3_PORT}
-      - S3_USE_SSL=${S3_USE_SSL}
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
-      - S3_SECRET_KEY=${S3_SECRET_KEY}
-      - S3_BUCKET=${S3_BUCKET}
-      - S3_PUBLIC_URL=${S3_PUBLIC_URL}
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-      - METRICS_ENABLED=${METRICS_ENABLED}
-      - METRICS_PORT=${METRICS_PORT}
-      - DANGEROUSLY_LOG_TO_SERVER_FOR_AI_AUTO_DEBUGGING=${DANGEROUSLY_LOG_TO_SERVER_FOR_AI_AUTO_DEBUGGING}
+      NODE_ENV: production
+      TZ: ${TZ:-UTC}
+      PORT: 3005
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      HANDY_MASTER_SECRET: ${HANDY_MASTER_SECRET}
+      # Optional S3 file storage
+      S3_HOST: ${S3_HOST:-}
+      S3_PORT: ${S3_PORT:-}
+      S3_USE_SSL: ${S3_USE_SSL:-}
+      S3_REGION: ${S3_REGION:-}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_PUBLIC_URL: ${S3_PUBLIC_URL:-}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - <http://localhost:3005/health> || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3005/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 20s
 
-  migrate:
-    image: happy-server:latest
-    container_name: happy-server-migrate
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-      - TZ=${TZ}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    command: yarn prisma migrate deploy
-    restart: "no"
- 
-  minio:
-    image: minio/minio:latest
-    container_name: minio
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:9000:9000"   # S3 API
-      - "127.0.0.1:9001:9001"   # Web 控制台
-    environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-      - TZ=${TZ}
-    volumes:
-      - minio_data:/data
-    command: server /data --console-address ":9001"
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
-
-  minio-init:
-    image: minio/mc:latest
-    container_name: minio-init
-    depends_on:
-      minio:
-        condition: service_healthy
-    entrypoint: ["sh","-c"]
-    environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-      - S3_BUCKET=${S3_BUCKET}
-      - TZ=${TZ}
-    command:
-      - >
-        echo "[minio-init] alias..."; mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" &&
-        echo "[minio-init] waiting..."; until mc ready --json local >/dev/null 2>&1; do echo "[minio-init] still waiting..."; sleep 2; done &&
-        echo "[minio-init] create bucket $$S3_BUCKET"; mc mb -p local/$$S3_BUCKET || true &&
-        echo "[minio-init] set anonymous download"; mc anonymous set download local/$$S3_BUCKET || true
-    restart: "no"
-
+  # ── PostgreSQL ───────────────────────────────────────────────────────────────
   postgres:
-    image: postgres:15
-    container_name: postgres
+    image: postgres:15-alpine
+    container_name: happy-postgres
     restart: unless-stopped
     environment:
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - TZ=${TZ}
+      POSTGRES_DB: ${POSTGRES_DB:-happy-server}
+      POSTGRES_USER: ${POSTGRES_USER:-happy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: ${TZ:-UTC}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # ports:
-    #   - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d happy-server -h localhost"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-happy} -d ${POSTGRES_DB:-happy-server}"]
+      interval: 10s
+      timeout: 5s
       retries: 10
- 
+      start_period: 10s
+    # Uncomment to expose postgres to host for debugging:
+    # ports:
+    #   - "127.0.0.1:5432:5432"
+
+  # ── Redis ────────────────────────────────────────────────────────────────────
   redis:
-    image: redis:7.2-alpine
-    container_name: redis
+    image: redis:7-alpine
+    container_name: happy-redis
     restart: unless-stopped
     volumes:
       - redis_data:/data
-    environment:
-      - TZ=${TZ}
-    # ports:
-    #   - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
+      interval: 10s
       timeout: 3s
       retries: 5
- 
+    # Uncomment to expose redis to host for debugging:
+    # ports:
+    #   - "127.0.0.1:6379:6379"
+
 volumes:
   postgres_data:
   redis_data:
-  minio_data:

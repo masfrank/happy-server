@@ -29,48 +29,80 @@
 > **本仓库为 [happy-server](https://github.com/slopus/happy/tree/main/packages/happy-server) 提供非官方 Docker 镜像。**  
 > 上游项目 [slopus/happy](https://github.com/slopus/happy) 官方并未发布 happy-server 的 Docker 镜像，本仓库填补了这一空白。
 
-### 快速启动
+### 快速启动（Docker Compose）
+
+**1. 克隆仓库并生成配置文件**
 
 ```bash
-docker run -d \
-  --name happy-server \
-  -p 3005:3005 \
-  -v happy-data:/data \
-  -e SECRET_KEY=你的密钥 \
-  masfrank/happy-server:latest
+git clone https://github.com/masfrank/happy-server.git
+cd happy-server
+cp .env.example .env
 ```
 
-### Docker Compose
+**2. 编辑 `.env`，唯一必填的密钥是 `HANDY_MASTER_SECRET`**
 
-```yaml
-version: "3.9"
-services:
-  happy-server:
-    image: masfrank/happy-server:latest
-    container_name: happy-server
-    restart: unless-stopped
-    ports:
-      - "3005:3005"
-    volumes:
-      - happy-data:/data
-    environment:
-      - SECRET_KEY=你的密钥
-      - NODE_ENV=production
-
-volumes:
-  happy-data:
+```bash
+# 生成安全密钥（只需生成一次，妥善保存 —— 修改此值会导致所有会话失效）
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 ```
 
-### 可用标签
+填入 `.env`：
+
+```env
+HANDY_MASTER_SECRET=<粘贴生成的密钥>
+POSTGRES_PASSWORD=<设置一个强密码>
+DATABASE_URL=postgresql://happy:<同上密码>@postgres:5432/happy-server
+```
+
+**3. 启动**
+
+```bash
+docker compose up -d
+```
+
+服务启动后访问 `http://localhost:3005`。
+
+---
+
+### 环境变量说明
+
+| 变量名 | 必填 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `HANDY_MASTER_SECRET` | ✅ | — | 端对端加密主密钥，只生成一次，永不更换 |
+| `DATABASE_URL` | ✅ | — | PostgreSQL 连接 URL |
+| `POSTGRES_DB` | ✅ | `happy-server` | 数据库名（postgres 服务使用） |
+| `POSTGRES_USER` | ✅ | `happy` | 数据库用户名 |
+| `POSTGRES_PASSWORD` | ✅ | — | 数据库密码 |
+| `REDIS_URL` | — | — | Redis 连接 URL，启用后支持多实例发布订阅 |
+| `PORT` | — | `3005` | 服务监听端口 |
+| `TZ` | — | `UTC` | 时区，如 `Asia/Shanghai` |
+| `S3_HOST` | — | — | S3 兼容存储地址，不填则使用本地磁盘 |
+| `S3_ACCESS_KEY` | — | — | S3 访问密钥 |
+| `S3_SECRET_KEY` | — | — | S3 私有密钥 |
+| `S3_BUCKET` | — | — | S3 存储桶名称 |
+| `S3_PUBLIC_URL` | — | — | 媒体文件公开访问的基础 URL |
+| `ELEVENLABS_API_KEY` | — | — | ElevenLabs 语音 API 密钥 |
+
+完整变量列表（含可选集成）请参阅 [`.env.example`](.env.example)。
+
+---
+
+### 可用镜像标签
 
 | 标签 | 说明 |
 |------|------|
 | `latest` | 最新稳定版，跟踪 upstream main 分支 |
 | `sha-xxxxxxx` | 特定 commit 构建，用于固定版本 |
 
+```bash
+docker pull masfrank/happy-server:latest
+```
+
+---
+
 ### 为什么我们的镜像更小？
 
-上游 Dockerfile 使用 `node:20-slim`（基于 Debian）作为运行时底座。我们采用两段式方案大幅缩减体积：
+上游 Dockerfile 使用 `node:20-slim`（基于 Debian）作为运行时底座。我们采用多阶段 Alpine 构建方案：
 
 | 阶段 | 基础镜像 | 作用 |
 |------|---------|------|
@@ -78,7 +110,7 @@ volumes:
 | Deps | `node:20-alpine` | 仅安装生产依赖，剔除开发包 |
 | **Runner** | `frolvlad/alpine-glibc:alpine-3.19_glibc-2.34` | 最小化运行时，Alpine + glibc 兼容层 |
 
-**Alpine vs Debian：** Alpine Linux 体积约 5 MB，而 Debian slim 约 75 MB。Alpine 使用 `musl` libc，某些 Node.js 原生插件需要 `glibc` 才能运行。我们通过引入 [`frolvlad/alpine-glibc`](https://github.com/nicowillis/alpine-glibc) 在 runner 阶段注入 glibc 兼容层，两全其美：镜像体积小，原生插件兼容性好。
+**Alpine vs Debian：** Alpine Linux 体积约 5 MB，而 Debian slim 约 75 MB。Alpine 使用 `musl` libc，某些 Node.js 原生插件需要 `glibc` 才能运行。我们通过引入 [`frolvlad/alpine-glibc`](https://github.com/nicowillis/alpine-glibc) 在 runner 阶段注入 glibc 兼容层，兼顾体积与兼容性。
 
 ### 本地构建
 
