@@ -38,7 +38,7 @@ RUN yarn install --frozen-lockfile --production --ignore-engines && \
     yarn cache clean
 
 # Stage 3: Runtime with glibc support
-FROM frolvlad/alpine-glibc:alpine-3.19_glibc-2.34 AS runner
+FROM frolvlad/alpine-glibc:alpine-3.22_glibc-2.42 AS runner
 
 # Install Node.js, Yarn and runtime dependencies
 RUN apk add --no-cache \
