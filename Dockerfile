@@ -37,15 +37,14 @@ COPY ./prisma ./prisma
 RUN yarn install --frozen-lockfile --production --ignore-engines && \
     yarn cache clean
 
-# Stage 3: Runtime with glibc support
-FROM frolvlad/alpine-glibc:alpine-3.19_glibc-2.34 AS runner
+# Stage 3: Runtime
+FROM node:20-alpine AS runner
 
-# Install Node.js, Yarn and runtime dependencies
+# Install runtime dependencies, with libc6-compat as a glibc alternative
 RUN apk add --no-cache \
-    nodejs \
-    yarn \
     python3 \
-    ffmpeg && \
+    ffmpeg \
+    libc6-compat && \
     rm -rf /var/cache/apk/*
 
 WORKDIR /app
