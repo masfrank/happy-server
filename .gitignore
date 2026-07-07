@@ -1,4 +1,18 @@
-webapp/
-data/
+node_modules
+.env
+dist
+.pgdata
+.minio
+
+.env.local
+.env
+
 .logs/
-*.tgz
+
+.claude/
+
+# Standalone build artifacts
+data/
+happy-server
+pglite.wasm
+pglite.data

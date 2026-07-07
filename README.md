@@ -1,133 +1,100 @@
-# Happy Server
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="/.github/logotype-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="/.github/logotype-light.png">
+    <img src="/.github/logotype-dark.png" width="400" alt="Happy">
+  </picture>
+</div>
 
-Minimal backend for open-source end-to-end encrypted Claude Code clients.
+<h1 align="center">Happy Server Self-Host</h1>
 
-## What is Happy?
+<h4 align="center">
+Self-hosted Happy Server for Claude Code and Codex clients, with end-to-end encrypted sync.
+</h4>
 
-Happy Server is the synchronization backbone for secure Claude Code clients. It enables multiple devices to share encrypted conversations while maintaining complete privacy - the server never sees your messages, only encrypted blobs it cannot read.
+<div align="center">
 
-## Features
+[📱 **iOS App**](https://apps.apple.com/us/app/happy-claude-code-client/id6748571505) • [🤖 **Android App**](https://play.google.com/store/apps/details?id=com.ex3ndr.happy) • [🌐 **Web App**](https://app.happy.engineering) • [📚 **Docs**](https://happy.engineering/docs/) • [💬 **Discord**](https://discord.gg/fX9WBAhyfD)
 
-- 🔐 **Zero Knowledge** - The server stores encrypted data but has no ability to decrypt it
-- 🎯 **Minimal Surface** - Only essential features for secure sync, nothing more  
-- 🕵️ **Privacy First** - No analytics, no tracking, no data mining
-- 📖 **Open Source** - Transparent implementation you can audit and self-host
-- 🔑 **Cryptographic Auth** - No passwords stored, only public key signatures
-- ⚡ **Real-time Sync** - WebSocket-based synchronization across all your devices
-- 📱 **Multi-device** - Seamless session management across phones, tablets, and computers
-- 🔔 **Push Notifications** - Notify when Claude Code finishes tasks or needs permissions (encrypted, we can't see the content)
-- 🌐 **Distributed Ready** - Built to scale horizontally when needed
+**[中文说明](./README.zh-CN.md)**
 
-## How It Works
+</div>
 
-Your Claude Code clients generate encryption keys locally and use Happy Server as a secure relay. Messages are end-to-end encrypted before leaving your device. The server's job is simple: store encrypted blobs and sync them between your devices in real-time.
+## What This Repository Is
 
-## Hosting
+This community repository tracks the latest upstream `packages/happy-server` from [slopus/happy](https://github.com/slopus/happy/tree/main/packages/happy-server) and adds Docker packaging for easier self-hosting.
 
-**You don't need to self-host!** Our free cloud Happy Server at `happy-api.slopus.com` is just as secure as running your own. Since all data is end-to-end encrypted before it reaches our servers, we literally cannot read your messages even if we wanted to. The encryption happens on your device, and only you have the keys.
+The current upstream server package is `happy-server-self-host` version `1.1.11`. It includes the standalone PGlite runtime, attachment upload APIs, voice usage endpoints, Socket.IO room-based event routing, and the package entrypoints from the monorepo server package.
 
-That said, Happy Server is open source and self-hostable if you prefer running your own infrastructure. The security model is identical whether you use our servers or your own.
+## Docker Quick Start
 
-## Self-Hosting with Docker
-
-The standalone Docker image runs everything in a single container with no external dependencies (no Postgres, no Redis, no S3).
+1. Clone and configure:
 
 ```bash
-docker build -t happy-server -f Dockerfile .
+git clone https://github.com/masfrank/happy-server.git
+cd happy-server
+cp .env.example .env
 ```
 
-Run from the monorepo root:
+2. Generate `HANDY_MASTER_SECRET` and put it in `.env`:
 
 ```bash
-docker run -p 3005:3005 \
-  -e HANDY_MASTER_SECRET=<your-secret> \
-  -v happy-data:/data \
-  happy-server
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 ```
 
-This uses:
-- **PGlite** - embedded PostgreSQL (data stored in `/data/pglite`)
-- **Local filesystem** - for file uploads (stored in `/data/files`)
-- **In-memory event bus** - no Redis needed
+3. Start the server:
 
-Data persists in the `happy-data` Docker volume across container restarts.
+```bash
+docker compose up -d --build
+```
 
-### Environment Variables
+The API listens on `http://localhost:3005` by default.
+
+## Runtime Model
+
+The Docker image runs the current standalone server flow:
+
+- `sources/standalone.ts migrate` applies Prisma migrations into PGlite.
+- `sources/standalone.ts serve` starts the Fastify API and Socket.IO server.
+- Data is stored under `/data` in the `happy_data` Docker volume.
+- File uploads use local filesystem storage by default.
+- Redis, Postgres, and S3 are not required for the default Docker Compose setup.
+
+## Environment Variables
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `HANDY_MASTER_SECRET` | Yes | - | Master secret for auth/encryption |
-| `PUBLIC_URL` | No | `http://localhost:3005` | Public base URL for file URLs sent to clients |
-| `PORT` | No | `3005` | Server port |
-| `DATA_DIR` | No | `/data` | Base data directory |
-| `PGLITE_DIR` | No | `/data/pglite` | PGlite database directory |
+| `HANDY_MASTER_SECRET` | Yes | - | Master secret for auth/encryption. Generate once and keep it stable. |
+| `PUBLIC_URL` | No | `http://localhost:3005` | Public base URL used for generated file URLs. |
+| `PORT` | No | `3005` | HTTP port inside the container. |
+| `HOST` | No | `0.0.0.0` | Bind host inside the container. |
+| `DATA_DIR` | No | `/data` | Base data directory. |
+| `PGLITE_DIR` | No | `/data/pglite` | PGlite database directory. |
+| `ELEVENLABS_API_KEY` | No | - | Enables ElevenLabs voice conversation credentials. |
+| `REVENUECAT_API_KEY` | No | - | Enables subscription checks for voice limits. |
 
-### Optional: External Services
+See [`.env.example`](.env.example) for the Compose-ready template.
 
-To use external Postgres or Redis instead of the embedded defaults, set:
+## Image Notes
 
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection URL (bypasses PGlite) |
-| `REDIS_URL` | Redis connection URL |
-| `S3_HOST` | S3/MinIO host (bypasses local file storage) |
+This repository keeps the server source aligned with upstream, but Docker is adapted for this standalone repository layout:
 
-### S3 bucket configuration (when self-hosting with S3)
+- Uses Yarn v1 because this repo keeps a standalone `yarn.lock`.
+- Vendors the matching upstream `@slopus/happy-wire` source as a local file dependency so the monorepo `workspace:*` dependency resolves outside the upstream pnpm workspace.
+- Runs through `tsx` in the container instead of relying on the upstream monorepo pnpm build pipeline; `tsx` is installed as a runtime dependency for this standalone Docker image.
 
-When `S3_HOST` is set, image attachments and other blobs land in S3 under
-`sessions/<sessionId>/attachments/<id>.enc`. Two bucket-level settings are
-not configured by the server itself and must be applied once at deploy
-time:
-
-**1. Lifecycle rule for attachment TTL.** Encrypted blobs are deleted when
-their session is deleted, but a long-lived session would otherwise keep
-its blobs forever. Add a lifecycle rule on the attachments prefix so
-objects age out automatically. Pick a TTL that matches your retention
-policy (30 days is a reasonable default).
+Build locally:
 
 ```bash
-# AWS CLI
-aws s3api put-bucket-lifecycle-configuration --bucket happy-blobs \
-  --lifecycle-configuration '{
-    "Rules": [{
-      "ID": "session-attachments-ttl",
-      "Status": "Enabled",
-      "Filter": { "Prefix": "sessions/" },
-      "Expiration": { "Days": 30 }
-    }]
-  }'
-
-# MinIO
-mc ilm rule add myminio/happy-blobs \
-  --expire-days 30 \
-  --prefix "sessions/"
+docker build -t happy-server .
 ```
 
-**2. Server-side encryption (defense-in-depth).** Blobs are already
-end-to-end encrypted by the client, but enabling AES-256 SSE on the
-bucket protects against an attacker who somehow obtains raw object
-storage access without the keys.
+Pull the community image:
 
 ```bash
-# AWS CLI
-aws s3api put-bucket-encryption --bucket happy-blobs \
-  --server-side-encryption-configuration '{
-    "Rules": [{
-      "ApplyServerSideEncryptionByDefault": {
-        "SSEAlgorithm": "AES256"
-      }
-    }]
-  }'
-
-# MinIO
-mc encrypt set sse-s3 myminio/happy-blobs
+docker pull masfrank/happy-server:latest
 ```
 
-Local-storage mode (no `S3_HOST`) writes blobs under
-`<DATA_DIR>/files/sessions/<sessionId>/attachments/`. There is no
-lifecycle equivalent — clean up old session directories on a cron if
-you want a TTL story.
+## Upstream
 
-## License
-
-MIT - Use it, modify it, deploy it anywhere.
+Core server code belongs to [slopus/happy](https://github.com/slopus/happy). This fork only adds standalone Docker packaging and related documentation for self-hosting.

@@ -1,0 +1,33 @@
+services:
+  happy-server:
+    image: masfrank/happy-server:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: happy-server
+    restart: unless-stopped
+    volumes:
+      - happy_data:/data
+    ports:
+      - "127.0.0.1:3005:3005"
+    environment:
+      NODE_ENV: production
+      TZ: ${TZ:-UTC}
+      PORT: 3005
+      HOST: 0.0.0.0
+      DATA_DIR: /data
+      PGLITE_DIR: /data/pglite
+      DB_PROVIDER: pglite
+      HANDY_MASTER_SECRET: ${HANDY_MASTER_SECRET}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3005}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      REVENUECAT_API_KEY: ${REVENUECAT_API_KEY:-}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3005/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  happy_data:
