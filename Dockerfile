@@ -15,6 +15,7 @@ COPY vendor ./vendor
 COPY prisma ./prisma
 
 RUN yarn install --production --ignore-engines && \
+    yarn generate && \
     yarn cache clean
 
 # Stage 2: runtime with glibc support for native modules

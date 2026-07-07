@@ -1,6 +1,7 @@
 import { Fastify } from "../types";
 import { log } from "@/utils/log";
 import { auth } from "@/app/auth/auth";
+import { db } from "@/storage/db";
 
 export function enableAuthentication(app: Fastify) {
     app.decorate('authenticate', async function (request: any, reply: any) {
@@ -16,6 +17,16 @@ export function enableAuthentication(app: Fastify) {
             const verified = await auth.verifyToken(token);
             if (!verified) {
                 log({ module: 'auth-decorator' }, `Auth failed - invalid token`);
+                return reply.code(401).send({ error: 'Invalid token' });
+            }
+
+            const account = await db.account.findUnique({
+                where: { id: verified.userId },
+                select: { id: true }
+            });
+            if (!account) {
+                auth.invalidateToken(token);
+                log({ module: 'auth-decorator', level: 'warn' }, `Auth failed - token user is missing from database: ${verified.userId}`);
                 return reply.code(401).send({ error: 'Invalid token' });
             }
 
