@@ -88,7 +88,7 @@ function normalizePGliteBytes(value: unknown): unknown {
 }
 
 function isBytesColumnType(columnType: unknown): boolean {
-    return columnType === "bytes" || columnType === "Bytes" || columnType === 11;
+    return columnType === "bytes" || columnType === "Bytes" || columnType === 13;
 }
 
 function withPGliteByteNormalization(factory: DriverAdapterFactory): DriverAdapterFactory {
